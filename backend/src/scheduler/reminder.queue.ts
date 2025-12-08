@@ -29,7 +29,11 @@ export const reminderQueue = new Queue<ReminderJobData>('reminders', {
 });
 
 reminderQueue.on('error', (error) => {
-  logger.error('Reminder queue error', { error: error.message });
+  // Log as warning to avoid spam - Redis may not be available
+  logger.warn('Reminder queue error (Redis may be unavailable)', { 
+    error: error.message,
+    note: 'This is expected if Redis is not configured'
+  });
 });
 
 // Event listeners for queue monitoring

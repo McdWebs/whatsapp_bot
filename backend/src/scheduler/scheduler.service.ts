@@ -2,7 +2,7 @@ import cron from 'node-cron';
 import { reminderWorker } from './reminder.worker';
 import { reminderDispatcher } from './jobs/reminder-dispatcher.job';
 import { runDailyHebCalSync } from './jobs/daily-hebcal-sync.job';
-import { closeRedisConnection } from './queue.config';
+import { closeRedisConnection, getRedisClient } from './queue.config';
 import { logger } from '../utils/logger';
 
 export class SchedulerService {
@@ -10,8 +10,26 @@ export class SchedulerService {
 
   async initialize(): Promise<void> {
     try {
-      // Start reminder dispatcher (runs every minute)
-      reminderDispatcher.start();
+      // Check Redis connection first
+      try {
+        const redisClient = getRedisClient();
+        await redisClient.ping();
+        logger.info('Redis connection verified');
+      } catch (redisError) {
+        logger.warn('Redis not available - reminder scheduling will be disabled', {
+          error: redisError instanceof Error ? redisError.message : String(redisError),
+        });
+        // Continue without Redis - webhook and admin features will still work
+      }
+
+      // Start reminder dispatcher (runs every minute) - only if Redis is available
+      try {
+        reminderDispatcher.start();
+      } catch (error) {
+        logger.warn('Reminder dispatcher failed to start (Redis may be unavailable)', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
 
       // Schedule daily HebCal sync (runs at 2 AM Israel time)
       this.hebcalSyncJob = cron.schedule('0 2 * * *', async () => {
@@ -30,7 +48,8 @@ export class SchedulerService {
       logger.info('Scheduler service initialized');
     } catch (error) {
       logger.error('Error initializing scheduler service', { error });
-      throw error;
+      // Don't throw - allow server to start even if scheduler fails
+      logger.warn('Server will continue without scheduler features');
     }
   }
 

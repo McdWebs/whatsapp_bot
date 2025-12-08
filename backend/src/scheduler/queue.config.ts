@@ -27,7 +27,11 @@ export function getRedisClient(): Redis {
     }
 
     redisClient.on('error', (error) => {
-      logger.error('Redis connection error', { error: error.message });
+      // Only log as warning to avoid spam - Redis may not be configured
+      logger.warn('Redis connection error', { 
+        error: error.message,
+        note: 'Reminder scheduling features will be unavailable until Redis is configured'
+      });
     });
 
     redisClient.on('connect', () => {

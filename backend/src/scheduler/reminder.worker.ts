@@ -35,6 +35,10 @@ reminderWorker.on('failed', (job, error) => {
 });
 
 reminderWorker.on('error', (error) => {
-  logger.error('Reminder worker error', { error: error.message });
+  // Log as warning to avoid spam - Redis may not be available
+  logger.warn('Reminder worker error (Redis may be unavailable)', { 
+    error: error.message,
+    note: 'This is expected if Redis is not configured'
+  });
 });
 
