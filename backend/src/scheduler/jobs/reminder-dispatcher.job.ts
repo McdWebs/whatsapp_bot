@@ -1,10 +1,9 @@
 import cron from 'node-cron';
-import { reminderQueue, ReminderJobData } from '../reminder.queue';
+import { getReminderQueue, ReminderJobData } from '../reminder.queue';
 import { reminderRepository } from '../../db/repositories/reminder.repository';
 import { hebcalSyncService } from '../../services/hebcal-sync.service';
 import { logger } from '../../utils/logger';
-import { ReminderType } from '../../db/repositories/reminder.repository';
-import { parseTime, getIsraelTime, isToday, isTomorrow } from '../../utils/timezone.utils';
+import { parseTime, getIsraelTime } from '../../utils/timezone.utils';
 
 export class ReminderDispatcher {
   private cronJob: cron.ScheduledTask | null = null;
@@ -33,6 +32,12 @@ export class ReminderDispatcher {
   }
 
   private async dispatchReminders(): Promise<void> {
+    const queue = getReminderQueue();
+    if (!queue) {
+      // Redis not available, skip dispatching
+      return;
+    }
+
     const now = getIsraelTime();
     const nowMinutes = now.getHours() * 60 + now.getMinutes();
 
@@ -53,7 +58,7 @@ export class ReminderDispatcher {
         // Schedule if reminder is within the next minute
         if (timeDiff >= 0 && timeDiff <= 1) {
           // Check if job already exists for this reminder
-          const existingJobs = await reminderQueue.getJobs(['waiting', 'delayed']);
+          const existingJobs = await queue.getJobs(['waiting', 'delayed']);
           const jobExists = existingJobs.some(
             (job) =>
               job.data.userId === reminder.user_id &&
@@ -72,7 +77,7 @@ export class ReminderDispatcher {
               reminderPreferenceId: reminder.id,
             };
 
-            await reminderQueue.add(`reminder-${reminder.id}`, jobData, {
+            await queue.add(`reminder-${reminder.id}`, jobData, {
               delay: Math.max(0, scheduledTime.getTime() - now.getTime()),
             });
 

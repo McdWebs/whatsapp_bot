@@ -1,5 +1,5 @@
 import cron from 'node-cron';
-import { reminderWorker } from './reminder.worker';
+import { getReminderWorker } from './reminder.worker';
 import { reminderDispatcher } from './jobs/reminder-dispatcher.job';
 import { runDailyHebCalSync } from './jobs/daily-hebcal-sync.job';
 import { closeRedisConnection, getRedisClient } from './queue.config';
@@ -65,7 +65,10 @@ export class SchedulerService {
       }
 
       // Close worker
-      await reminderWorker.close();
+      const worker = getReminderWorker();
+      if (worker) {
+        await worker.close();
+      }
 
       // Close Redis connection
       await closeRedisConnection();
