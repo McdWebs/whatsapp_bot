@@ -33,12 +33,6 @@ services:
         sync: false
       - key: WHATSAPP_TEMPLATE_WELCOME
         sync: false
-      - key: WHATSAPP_TEMPLATE_REMINDER
-        sync: false
-      - key: WHATSAPP_TEMPLATE_CONFIRMATION
-        sync: false
-      - key: WHATSAPP_TEMPLATE_HELP
-        sync: false
       - key: ADMIN_API_KEY
         sync: false
       - key: ADMIN_JWT_SECRET

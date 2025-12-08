@@ -4,10 +4,6 @@ import './UserList.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
-interface StatsProps {
-  apiKey: string;
-}
-
 interface User {
   id: string;
   phone_number: string;
@@ -17,7 +13,7 @@ interface User {
   enabledReminders: number;
 }
 
-function UserList({ apiKey }: StatsProps) {
+function UserList() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -29,11 +25,7 @@ function UserList({ apiKey }: StatsProps) {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_BASE_URL}/admin/users`, {
-        headers: {
-          'X-API-Key': apiKey,
-        },
-      });
+      const response = await axios.get(`${API_BASE_URL}/admin/users`);
       setUsers(response.data.users || []);
       setError('');
     } catch (err: any) {

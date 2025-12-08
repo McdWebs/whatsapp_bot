@@ -98,3 +98,20 @@
   margin: 0;
 }
 
+.result .status-info {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: #155724;
+}
+
+.result.error .status-info {
+  color: #721c24;
+}
+
+.result .status-note {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  font-style: italic;
+  color: #856404;
+}
+

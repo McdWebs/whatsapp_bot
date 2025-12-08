@@ -34,11 +34,16 @@ export class TwilioProvider extends BaseWhatsAppProvider {
     }
 
     try {
-      // Get template ID from config
-      const templateId = config.whatsapp.templates[templateName as keyof typeof config.whatsapp.templates];
+      // Get template ID from config, fallback to welcome if not found
+      let templateId = config.whatsapp.templates[templateName as keyof typeof config.whatsapp.templates];
       
-      if (!templateId) {
-        throw new Error(`Template ID not found for: ${templateName}`);
+      // If template not found or is a placeholder, use welcome template
+      if (!templateId || templateId.includes('_template_id') || templateId === 'welcome') {
+        templateId = config.whatsapp.templates.welcome;
+        logger.warn(`Template ${templateName} not configured, using welcome template`, {
+          requestedTemplate: templateName,
+          usingTemplate: 'welcome',
+        });
       }
 
       logger.info('Attempting to send Twilio WhatsApp message', {
@@ -56,13 +61,27 @@ export class TwilioProvider extends BaseWhatsAppProvider {
       };
 
       // Add content variables if params provided
-      if (params && params.length > 0) {
+      // IMPORTANT: Only send contentVariables if the template actually has variables
+      // Sending variables to a template without variables will cause error 63016
+      if (params && params.length > 0 && params.some(p => p && p.trim())) {
         messagePayload.contentVariables = JSON.stringify(
           params.reduce((acc, param, index) => {
-            acc[`${index + 1}`] = param;
+            if (param && param.trim()) {
+              acc[`${index + 1}`] = param.trim();
+            }
             return acc;
           }, {} as Record<string, string>)
         );
+        
+        logger.info('Adding content variables to template', {
+          templateId,
+          variables: messagePayload.contentVariables,
+        });
+      } else {
+        logger.info('No content variables - template likely has no variables', {
+          templateId,
+          paramsProvided: params?.length || 0,
+        });
       }
 
       logger.info('Sending Twilio message with payload', {
@@ -71,7 +90,8 @@ export class TwilioProvider extends BaseWhatsAppProvider {
 
       const message = await this.client.messages.create(messagePayload);
 
-      logger.info('Twilio message sent - Full response', {
+      // Log full response with all available fields
+      const fullResponse = {
         messageSid: message.sid,
         status: message.status,
         to: message.to,
@@ -89,11 +109,44 @@ export class TwilioProvider extends BaseWhatsAppProvider {
         priceUnit: message.priceUnit,
         uri: message.uri,
         accountSid: message.accountSid,
-      });
+        subresourceUris: message.subresourceUris,
+        messagingServiceSid: (message as any).messagingServiceSid,
+        // Additional Twilio fields that might contain error info
+        statusCallback: (message as any).statusCallback,
+        statusCallbackMethod: (message as any).statusCallbackMethod,
+      };
+      
+      logger.info('Twilio message sent - Full response', fullResponse);
+      
+      // Log warning if status indicates potential issues or if there are error codes
+      if (message.errorCode || message.errorMessage) {
+        logger.error('Twilio message has error code/message', {
+          messageSid: message.sid,
+          status: message.status,
+          errorCode: message.errorCode,
+          errorMessage: message.errorMessage,
+          from: message.from,
+          to: message.to,
+          fullResponse: JSON.stringify(fullResponse, null, 2),
+        });
+      } else if (message.status === 'queued' || message.status === 'sending') {
+        logger.warn('Message is queued/sending - may take time to deliver', {
+          messageSid: message.sid,
+          status: message.status,
+          from: message.from,
+          to: message.to,
+          note: 'For purchased numbers, ensure template is approved and webhook is configured. Check Twilio Console for delivery status.',
+        });
+      }
 
+      // Check if message was actually sent successfully
+      const isSuccess = message.status !== 'failed' && !message.errorCode;
+      
       return {
-        success: true,
+        success: isSuccess,
         messageId: message.sid,
+        status: message.status,
+        error: message.errorMessage || (message.status === 'failed' ? 'Message failed' : undefined),
       };
     } catch (error: any) {
       // Extract Twilio error details
@@ -150,6 +203,69 @@ export class TwilioProvider extends BaseWhatsAppProvider {
     }
   }
 
+  async sendRegularMessage(
+    to: string,
+    message: string
+  ): Promise<SendMessageResult> {
+    const normalizedTo = this.normalizePhoneNumber(to);
+    let normalizedFrom = this.fromNumber;
+    if (!normalizedFrom.startsWith('whatsapp:')) {
+      const phoneOnly = this.normalizePhoneNumber(this.fromNumber);
+      normalizedFrom = `whatsapp:${phoneOnly}`;
+    }
+
+    try {
+      logger.info('Sending regular WhatsApp message (24-hour window)', {
+        from: normalizedFrom,
+        to: normalizedTo,
+        messageLength: message.length,
+      });
+
+      // Use regular body parameter for messages within 24-hour window
+      const messagePayload = {
+        from: normalizedFrom,
+        to: `whatsapp:${normalizedTo}`,
+        body: message,
+      };
+
+      const twilioMessage = await this.client.messages.create(messagePayload);
+
+      logger.info('Regular WhatsApp message sent', {
+        messageSid: twilioMessage.sid,
+        status: twilioMessage.status,
+        to: twilioMessage.to,
+        from: twilioMessage.from,
+        errorCode: twilioMessage.errorCode,
+        errorMessage: twilioMessage.errorMessage,
+      });
+
+      // Check for specific error codes (errorCode is a number in Twilio)
+      const errorCodeNum = twilioMessage.errorCode ? Number(twilioMessage.errorCode) : null;
+      if (errorCodeNum === 63051 || errorCodeNum === 63016) {
+        logger.warn('Message outside 24-hour window - template required', {
+          messageSid: twilioMessage.sid,
+          errorCode: twilioMessage.errorCode,
+          note: 'Recipient must message you first, or use an approved template',
+        });
+      }
+
+      return {
+        success: twilioMessage.status !== 'failed' && !twilioMessage.errorCode,
+        messageId: twilioMessage.sid,
+        status: twilioMessage.status,
+        error: twilioMessage.errorMessage || (errorCodeNum === 63051 
+          ? 'Message outside 24-hour window. Recipient must message you first, or use an approved template.' 
+          : undefined),
+      };
+    } catch (error: any) {
+      this.logError('sendRegularMessage', error, { to, message });
+      return {
+        success: false,
+        error: error?.message || 'Failed to send regular message',
+      };
+    }
+  }
+
   parseWebhookPayload(payload: any): WhatsAppWebhookPayload {
     return {
       messageId: payload.MessageSid || payload.SmsSid || '',
@@ -162,23 +278,5 @@ export class TwilioProvider extends BaseWhatsAppProvider {
     };
   }
 
-  private buildTemplateMessage(templateName: string, params: string[]): string {
-    // For Twilio, we'll use a simple text format with template parameters
-    // In production, you should use Twilio's Content API for approved templates
-    const templates: Record<string, (params: string[]) => string> = {
-      welcome: () => 'Welcome! I can help you set up reminders for sunset, candle-lighting, and prayer times.',
-      reminder: (p) => `Reminder: ${p[0] || 'Your reminder'} at ${p[1] || 'the scheduled time'}`,
-      confirmation: (p) => `Your reminder for ${p[0] || 'this event'} has been set!`,
-      help: () => 'Available commands: HELP, STOP, SETTINGS, CHANGE_REMINDER',
-    };
-
-    const template = templates[templateName];
-    if (template) {
-      return template(params);
-    }
-
-    // Fallback: use template name and params
-    return `${templateName}${params.length > 0 ? ': ' + params.join(', ') : ''}`;
-  }
 }
 

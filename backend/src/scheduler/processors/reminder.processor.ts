@@ -101,10 +101,10 @@ export async function processReminderJob(job: Job<ReminderJobData>): Promise<voi
       reminder_time: reminderTime.toISOString(),
     });
 
-    // Send WhatsApp message
+    // Send WhatsApp message (using welcome template for now)
     const result = await whatsappMessageService.sendTemplateMessageWithRetry(
       user.phone_number,
-      'reminder',
+      'welcome',
       [message]
     );
 

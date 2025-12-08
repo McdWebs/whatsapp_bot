@@ -41,7 +41,7 @@ export class InitialStateHandler implements StateHandler {
 
   private async sendHelpMessage(phoneNumber: string): Promise<void> {
     try {
-      await whatsappMessageService.sendTemplateMessage(phoneNumber, 'help', []);
+      await whatsappMessageService.sendTemplateMessage(phoneNumber, 'welcome', []);
     } catch (error) {
       logger.error('Error sending help message', { phoneNumber, error });
     }
@@ -54,7 +54,7 @@ export class InitialStateHandler implements StateHandler {
 
       await whatsappMessageService.sendTemplateMessage(
         context.phoneNumber,
-        'confirmation',
+        'welcome',
         ['All reminders have been stopped']
       );
     } catch (error) {

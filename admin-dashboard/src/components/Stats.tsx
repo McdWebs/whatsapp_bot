@@ -4,10 +4,6 @@ import './Stats.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
-interface StatsProps {
-  apiKey: string;
-}
-
 interface StatsData {
   users: {
     total: number;
@@ -20,7 +16,7 @@ interface StatsData {
   };
 }
 
-function Stats({ apiKey }: StatsProps) {
+function Stats() {
   const [stats, setStats] = useState<StatsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -32,11 +28,7 @@ function Stats({ apiKey }: StatsProps) {
   const fetchStats = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_BASE_URL}/admin/stats`, {
-        headers: {
-          'X-API-Key': apiKey,
-        },
-      });
+      const response = await axios.get(`${API_BASE_URL}/admin/stats`);
       setStats(response.data);
       setError('');
     } catch (err: any) {

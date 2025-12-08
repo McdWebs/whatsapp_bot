@@ -42,7 +42,7 @@ export class SelectingTimeStateHandler implements StateHandler {
 
       await whatsappMessageService.sendTemplateMessage(
         context.phoneNumber,
-        'confirmation',
+        'welcome',
         [`Reminder set for ${time}`]
       );
 
@@ -78,7 +78,7 @@ export class SelectingTimeStateHandler implements StateHandler {
     try {
       await whatsappMessageService.sendTemplateMessage(
         phoneNumber,
-        'help',
+        'welcome',
         ['Invalid time format. Please use HH:MM (24-hour format), e.g., 18:30']
       );
     } catch (error) {
@@ -88,7 +88,7 @@ export class SelectingTimeStateHandler implements StateHandler {
 
   private async sendHelpMessage(phoneNumber: string): Promise<void> {
     try {
-      await whatsappMessageService.sendTemplateMessage(phoneNumber, 'help', []);
+      await whatsappMessageService.sendTemplateMessage(phoneNumber, 'welcome', []);
     } catch (error) {
       logger.error('Error sending help message', { phoneNumber, error });
     }
@@ -98,7 +98,7 @@ export class SelectingTimeStateHandler implements StateHandler {
     try {
       await whatsappMessageService.sendTemplateMessage(
         phoneNumber,
-        'help',
+        'welcome',
         ['An error occurred. Please try again or contact support.']
       );
     } catch (error) {
@@ -111,7 +111,7 @@ export class SelectingTimeStateHandler implements StateHandler {
       await reminderRepository.disableAllForUser(context.userId);
       await whatsappMessageService.sendTemplateMessage(
         context.phoneNumber,
-        'confirmation',
+        'welcome',
         ['All reminders have been stopped']
       );
     } catch (error) {

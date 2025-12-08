@@ -31,16 +31,31 @@ export const messageController = {
         return;
       }
 
-      // Use template if provided, otherwise use custom message
-      const template = templateName || 'help';
-      const params = templateParams || (message ? [message] : []);
+      // Check if we should send a regular message (24-hour window) or template
+      const sendRegular = req.body.sendRegular === true || req.body.sendRegular === 'true';
+      
+      let result: any;
+      
+      if (sendRegular && message) {
+        // Send regular message (works within 24-hour window, no template needed)
+        result = await whatsappMessageService.sendRegularMessage(
+          targetPhoneNumber,
+          message
+        );
+      } else {
+        // Use template if provided, otherwise use custom message
+        const template = templateName || 'welcome';
+        // Only send params if template actually needs them
+        // Welcome template typically has no variables, so don't send empty params
+        const params = templateParams || (message && message.trim() ? [message] : []);
 
-      // Send message
-      const result = await whatsappMessageService.sendTemplateMessageWithRetry(
-        targetPhoneNumber,
-        template,
-        params
-      );
+        // Send message
+        result = await whatsappMessageService.sendTemplateMessageWithRetry(
+          targetPhoneNumber,
+          template,
+          params
+        );
+      }
 
       if (result.success) {
         // Log to history if userId provided
@@ -48,7 +63,7 @@ export const messageController = {
           await historyRepository.create({
             user_id: userId,
             type: 'custom' as ReminderType,
-            delivery_status: 'sent',
+            delivery_status: (result as any).status === 'delivered' ? 'delivered' : 'sent',
             reminder_time: new Date().toISOString(),
           });
         }
@@ -57,13 +72,21 @@ export const messageController = {
           success: true,
           messageId: result.messageId,
           message: 'Message sent successfully',
+          status: (result as any).status || 'queued',
+          note: (result as any).status === 'queued' 
+            ? 'Message is queued. Delivery may take a few moments. Check status in Twilio Console or use /admin/messages/status/:messageSid endpoint.' 
+            : undefined,
+          checkStatusUrl: result.messageId 
+            ? `/admin/messages/status/${result.messageId}` 
+            : undefined,
         });
       } else {
         // Return detailed error message
         const errorMessage = result.error || 'Failed to send message';
         logger.error('Failed to send message from admin', {
           targetPhoneNumber,
-          template,
+          sendRegular,
+          templateName: sendRegular ? 'regular' : templateName,
           error: errorMessage,
         });
         

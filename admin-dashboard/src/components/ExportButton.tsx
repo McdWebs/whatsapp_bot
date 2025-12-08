@@ -4,11 +4,7 @@ import './ExportButton.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
-interface ExportButtonProps {
-  apiKey: string;
-}
-
-function ExportButton({ apiKey }: ExportButtonProps) {
+function ExportButton() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ success: boolean; message?: string; spreadsheetUrl?: string } | null>(null);
 
@@ -16,15 +12,7 @@ function ExportButton({ apiKey }: ExportButtonProps) {
     try {
       setLoading(true);
       setResult(null);
-      const response = await axios.post(
-        `${API_BASE_URL}/admin/export/sheets`,
-        {},
-        {
-          headers: {
-            'X-API-Key': apiKey,
-          },
-        }
-      );
+      const response = await axios.post(`${API_BASE_URL}/admin/export/sheets`, {});
       setResult(response.data);
     } catch (err: any) {
       setResult({

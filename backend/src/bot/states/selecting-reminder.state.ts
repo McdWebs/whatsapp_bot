@@ -81,7 +81,7 @@ export class SelectingReminderStateHandler implements StateHandler {
 Reply with the number or name.`;
 
     try {
-      await whatsappMessageService.sendTemplateMessage(phoneNumber, 'help', []);
+      await whatsappMessageService.sendTemplateMessage(phoneNumber, 'welcome', []);
     } catch (error) {
       logger.error('Error sending reminder type prompt', { phoneNumber, error });
     }
@@ -92,7 +92,7 @@ Reply with the number or name.`;
 Example: 18:30`;
 
     try {
-      await whatsappMessageService.sendTemplateMessage(phoneNumber, 'help', []);
+      await whatsappMessageService.sendTemplateMessage(phoneNumber, 'welcome', []);
     } catch (error) {
       logger.error('Error sending time prompt', { phoneNumber, error });
     }
@@ -103,7 +103,7 @@ Example: 18:30`;
 Default: Jerusalem`;
 
     try {
-      await whatsappMessageService.sendTemplateMessage(phoneNumber, 'help', []);
+      await whatsappMessageService.sendTemplateMessage(phoneNumber, 'welcome', []);
     } catch (error) {
       logger.error('Error sending location prompt', { phoneNumber, error });
     }
@@ -111,7 +111,7 @@ Default: Jerusalem`;
 
   private async sendHelpMessage(phoneNumber: string): Promise<void> {
     try {
-      await whatsappMessageService.sendTemplateMessage(phoneNumber, 'help', []);
+      await whatsappMessageService.sendTemplateMessage(phoneNumber, 'welcome', []);
     } catch (error) {
       logger.error('Error sending help message', { phoneNumber, error });
     }
@@ -122,7 +122,7 @@ Default: Jerusalem`;
       await reminderRepository.disableAllForUser(context.userId);
       await whatsappMessageService.sendTemplateMessage(
         context.phoneNumber,
-        'confirmation',
+        'welcome',
         ['All reminders have been stopped']
       );
     } catch (error) {

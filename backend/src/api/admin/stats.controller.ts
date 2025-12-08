@@ -5,6 +5,29 @@ import { historyRepository } from '../../db/repositories/history.repository';
 import { logger } from '../../utils/logger';
 
 export const statsController = {
+  async getRecentUsers(req: Request, res: Response): Promise<void> {
+    try {
+      const limit = parseInt(req.query.limit as string) || 10;
+      const users = await userRepository.getAllUsers(limit, 0);
+      
+      res.json({
+        success: true,
+        count: users.length,
+        users: users.map(u => ({
+          id: u.id,
+          phone_number: u.phone_number,
+          current_state: u.current_state,
+          created_at: u.created_at,
+        })),
+      });
+    } catch (error) {
+      logger.error('Error getting recent users', { error });
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Internal server error',
+      });
+    }
+  },
   async getStats(req: Request, res: Response): Promise<void> {
     try {
       const userCount = await userRepository.countUsers();

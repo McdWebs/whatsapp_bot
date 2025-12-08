@@ -148,9 +148,9 @@ export const config: Config = {
     ...getProviderConfig(),
     templates: {
       welcome: getRequiredEnv('WHATSAPP_TEMPLATE_WELCOME'),
-      reminder: getRequiredEnv('WHATSAPP_TEMPLATE_REMINDER'),
-      confirmation: getRequiredEnv('WHATSAPP_TEMPLATE_CONFIRMATION'),
-      help: getRequiredEnv('WHATSAPP_TEMPLATE_HELP'),
+      reminder: getOptionalEnv('WHATSAPP_TEMPLATE_REMINDER') || 'welcome', // Fallback to welcome
+      confirmation: getOptionalEnv('WHATSAPP_TEMPLATE_CONFIRMATION') || 'welcome', // Fallback to welcome
+      help: getOptionalEnv('WHATSAPP_TEMPLATE_HELP') || 'welcome', // Fallback to welcome
     },
   },
   admin: {

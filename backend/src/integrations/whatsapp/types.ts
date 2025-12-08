@@ -22,6 +22,7 @@ export interface SendMessageResult {
   success: boolean;
   messageId?: string;
   error?: string;
+  status?: string; // Message status from provider (queued, sent, delivered, failed)
 }
 
 export interface WhatsAppProvider {
@@ -29,6 +30,10 @@ export interface WhatsAppProvider {
     to: string,
     templateName: string,
     params?: string[]
+  ): Promise<SendMessageResult>;
+  sendRegularMessage?(
+    to: string,
+    message: string
   ): Promise<SendMessageResult>;
   verifyWebhookSignature(payload: any, signature: string): boolean;
   parseWebhookPayload(payload: any): WhatsAppWebhookPayload;
