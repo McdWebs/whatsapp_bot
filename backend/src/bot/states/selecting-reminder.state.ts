@@ -1,23 +1,9 @@
 import { UserState, StateContext, StateHandler } from './index';
 import { whatsappMessageService } from '../../integrations/whatsapp/message.service';
-import { reminderRepository, ReminderType } from '../../db/repositories/reminder.repository';
+import { reminderRepository } from '../../db/repositories/reminder.repository';
 import { logger } from '../../utils/logger';
 
 export class SelectingReminderStateHandler implements StateHandler {
-  private readonly reminderTypes: Record<string, ReminderType> = {
-    '1': 'sunset',
-    '2': 'candle',
-    '3': 'prayer',
-    '4': 'custom',
-    SUNSET: 'sunset',
-    CANDLE: 'candle',
-    PRAYER: 'prayer',
-    CUSTOM: 'custom',
-    שקיעה: 'sunset',
-    הדלקת: 'candle',
-    תפילה: 'prayer',
-  };
-
   async handle(context: StateContext, message: string): Promise<StateContext> {
     const upperMessage = message.toUpperCase().trim();
 
@@ -32,58 +18,65 @@ export class SelectingReminderStateHandler implements StateHandler {
       return { ...context, currentState: UserState.CONFIRMED };
     }
 
-    // Parse reminder type selection
-    const reminderType = this.parseReminderType(message);
-
-    if (!reminderType) {
-      await this.sendReminderTypePrompt(context.phoneNumber);
-      return context;
-    }
-
-    // Store selected type in context
-    const newContext = {
-      ...context,
-      data: {
-        ...context.data,
-        selectedReminderType: reminderType,
-      },
-    };
-
-    // If it's a custom reminder, ask for time
-    if (reminderType === 'custom') {
+    // Parse reminder type selection: "1" = Tefillin, "2" = Custom, "3" = Delete
+    const trimmedMessage = message.trim();
+    
+    if (trimmedMessage === '1' || trimmedMessage === '1️⃣') {
+      // Tefillin Reminder - send time offset menu
+      await this.sendTefillinTimeMenu(context.phoneNumber);
+      return {
+        ...context,
+        currentState: UserState.SELECTING_TEFILLIN_TIME,
+        data: {
+          ...context.data,
+          selectedReminderType: 'tefillin',
+        },
+      };
+    } else if (trimmedMessage === '2' || trimmedMessage === '2️⃣') {
+      // Custom Reminder - move to time selection
       await this.sendTimePrompt(context.phoneNumber);
       return {
-        ...newContext,
+        ...context,
         currentState: UserState.SELECTING_TIME,
+        data: {
+          ...context.data,
+          selectedReminderType: 'custom',
+        },
       };
+    } else if (trimmedMessage === '3' || trimmedMessage === '3️⃣') {
+      // Delete Reminder - move to delete selection
+      return {
+        ...context,
+        currentState: UserState.SELECTING_REMINDER_TO_DELETE,
+      };
+    } else {
+      // Invalid selection - resend menu
+      await this.sendReminderTypeMenu(context.phoneNumber);
+      return context;
     }
-
-    // For dynamic reminders, ask for location
-    await this.sendLocationPrompt(context.phoneNumber);
-    return {
-      ...newContext,
-      currentState: UserState.SELECTING_LOCATION,
-    };
   }
 
-  private parseReminderType(message: string): ReminderType | null {
-    const upperMessage = message.toUpperCase().trim();
-    return this.reminderTypes[upperMessage] || null;
-  }
-
-  private async sendReminderTypePrompt(phoneNumber: string): Promise<void> {
-    const prompt = `Please select a reminder type:
-1. Sunset times
-2. Candle-lighting times (Shabbat)
-3. Prayer times
-4. Custom time reminder
-
-Reply with the number or name.`;
-
+  private async sendReminderTypeMenu(phoneNumber: string): Promise<void> {
     try {
-      await whatsappMessageService.sendTemplateMessage(phoneNumber, 'welcome', []);
+      await whatsappMessageService.sendMenu(
+        phoneNumber,
+        'What would you like to do?',
+        ['Tefillin Reminder', 'Custom Reminder', 'Delete Reminder']
+      );
     } catch (error) {
-      logger.error('Error sending reminder type prompt', { phoneNumber, error });
+      logger.error('Error sending reminder type menu', { phoneNumber, error });
+    }
+  }
+
+  private async sendTefillinTimeMenu(phoneNumber: string): Promise<void> {
+    try {
+      await whatsappMessageService.sendMenu(
+        phoneNumber,
+        'When should I remind you before sunset?',
+        ['20 minutes', '30 minutes', '1 hour']
+      );
+    } catch (error) {
+      logger.error('Error sending tefillin time menu', { phoneNumber, error });
     }
   }
 
@@ -92,7 +85,7 @@ Reply with the number or name.`;
 Example: 18:30`;
 
     try {
-      await whatsappMessageService.sendTemplateMessage(phoneNumber, 'welcome', []);
+      await whatsappMessageService.sendTemplateMessage(phoneNumber, 'help', [prompt]);
     } catch (error) {
       logger.error('Error sending time prompt', { phoneNumber, error });
     }
@@ -103,7 +96,7 @@ Example: 18:30`;
 Default: Jerusalem`;
 
     try {
-      await whatsappMessageService.sendTemplateMessage(phoneNumber, 'welcome', []);
+      await whatsappMessageService.sendTemplateMessage(phoneNumber, 'help', []);
     } catch (error) {
       logger.error('Error sending location prompt', { phoneNumber, error });
     }

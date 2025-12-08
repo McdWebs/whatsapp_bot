@@ -38,7 +38,10 @@ export async function processReminderJob(job: Job<ReminderJobData>): Promise<voi
     // Calculate actual reminder time
     let reminderTime: Date;
 
-    if (preference.type === 'custom' && preference.time) {
+    if (preference.type === 'tefillin' && preference.reminder_time) {
+      // Tefillin reminder - use pre-calculated reminder_time
+      reminderTime = new Date(preference.reminder_time);
+    } else if (preference.type === 'custom' && preference.time) {
       // Custom time reminder
       const timeParts = parseTime(preference.time);
       if (!timeParts) {
@@ -87,11 +90,16 @@ export async function processReminderJob(job: Job<ReminderJobData>): Promise<voi
     }
 
     // Build message
-    const message = messageTemplateService.buildReminderMessage(
-      preference.type,
-      reminderTime,
-      preference.location
-    );
+    let message: string;
+    if (preference.type === 'tefillin') {
+      message = messageTemplateService.buildTefillinReminderMessage();
+    } else {
+      message = messageTemplateService.buildReminderMessage(
+        preference.type,
+        reminderTime,
+        preference.location
+      );
+    }
 
     // Create history record
     const history = await historyRepository.create({
@@ -117,6 +125,7 @@ export async function processReminderJob(job: Job<ReminderJobData>): Promise<voi
         historyId: history.id,
         messageId: result.messageId,
       });
+      // Note: Reminder stays in database for daily recurring reminders
     } else {
       await historyRepository.updateStatus(history.id, 'failed', result.error);
       logger.error('Reminder send failed', {

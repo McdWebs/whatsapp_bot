@@ -18,8 +18,8 @@ export class InitialStateHandler implements StateHandler {
       return { ...context, currentState: UserState.CONFIRMED };
     }
 
-    // Welcome new user and start onboarding
-    await this.sendWelcomeMessage(context.phoneNumber);
+    // Send reminder type menu immediately
+    await this.sendReminderTypeMenu(context.phoneNumber);
 
     return {
       ...context,
@@ -27,15 +27,15 @@ export class InitialStateHandler implements StateHandler {
     };
   }
 
-  private async sendWelcomeMessage(phoneNumber: string): Promise<void> {
+  private async sendReminderTypeMenu(phoneNumber: string): Promise<void> {
     try {
-      await whatsappMessageService.sendTemplateMessage(
+      await whatsappMessageService.sendMenu(
         phoneNumber,
-        'welcome',
-        []
+        'What would you like to do?',
+        ['Tefillin Reminder', 'Custom Reminder', 'Delete Reminder']
       );
     } catch (error) {
-      logger.error('Error sending welcome message', { phoneNumber, error });
+      logger.error('Error sending reminder type menu', { phoneNumber, error });
     }
   }
 

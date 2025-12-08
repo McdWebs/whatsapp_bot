@@ -2,7 +2,9 @@ import { UserState, StateContext, StateHandler } from './states/index';
 import { InitialStateHandler } from './states/initial.state';
 import { SelectingReminderStateHandler } from './states/selecting-reminder.state';
 import { SelectingTimeStateHandler } from './states/selecting-time.state';
+import { SelectingTefillinTimeStateHandler } from './states/selecting-tefillin-time.state';
 import { SelectingLocationStateHandler } from './states/selecting-location.state';
+import { SelectingReminderToDeleteStateHandler } from './states/selecting-reminder-to-delete.state';
 import { userRepository } from '../db/repositories/user.repository';
 import { logger } from '../utils/logger';
 
@@ -13,7 +15,9 @@ export class StateMachine {
     this.handlers.set(UserState.INITIAL, new InitialStateHandler());
     this.handlers.set(UserState.SELECTING_REMINDER_TYPE, new SelectingReminderStateHandler());
     this.handlers.set(UserState.SELECTING_TIME, new SelectingTimeStateHandler());
+    this.handlers.set(UserState.SELECTING_TEFILLIN_TIME, new SelectingTefillinTimeStateHandler());
     this.handlers.set(UserState.SELECTING_LOCATION, new SelectingLocationStateHandler());
+    this.handlers.set(UserState.SELECTING_REMINDER_TO_DELETE, new SelectingReminderToDeleteStateHandler());
   }
 
   async processMessage(userId: string, phoneNumber: string, message: string): Promise<void> {
@@ -49,6 +53,21 @@ export class StateMachine {
           oldState: currentState,
           newState: newContext.currentState,
         });
+
+        // If entering SELECTING_REMINDER_TO_DELETE state, trigger menu display
+        if (newContext.currentState === UserState.SELECTING_REMINDER_TO_DELETE) {
+          const deleteHandler = this.handlers.get(UserState.SELECTING_REMINDER_TO_DELETE);
+          if (deleteHandler) {
+            // Call handler with empty message to trigger menu display
+            await deleteHandler.handle(
+              {
+                ...newContext,
+                data: { ...newContext.data, justEntered: true },
+              },
+              ''
+            );
+          }
+        }
       }
     } catch (error) {
       logger.error('Error in state machine', {

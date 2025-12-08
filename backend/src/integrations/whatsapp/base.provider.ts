@@ -8,6 +8,8 @@ export abstract class BaseWhatsAppProvider implements WhatsAppProvider {
     params?: string[]
   ): Promise<SendMessageResult>;
 
+  abstract sendMenu(to: string, title: string, options: string[]): Promise<SendMessageResult>;
+
   abstract verifyWebhookSignature(payload: any, signature: string): boolean;
 
   abstract parseWebhookPayload(payload: any): WhatsAppWebhookPayload;
