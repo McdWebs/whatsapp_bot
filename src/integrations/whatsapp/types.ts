@@ -1,0 +1,53 @@
+export interface WhatsAppMessage {
+  from: string; // Phone number
+  to: string;
+  body?: string;
+  type: 'text' | 'template' | 'interactive';
+  templateName?: string;
+  templateParams?: string[];
+  messageId?: string;
+}
+
+export interface WhatsAppWebhookPayload {
+  messageId: string;
+  from: string;
+  to: string;
+  body: string;
+  timestamp: string;
+  type: string;
+  [key: string]: any; // Provider-specific fields
+}
+
+export interface SendMessageResult {
+  success: boolean;
+  messageId?: string;
+  error?: string;
+}
+
+export interface InteractiveButton {
+  id: string;
+  title: string;
+}
+
+export interface InteractiveListItem {
+  id: string;
+  title: string;
+  description?: string;
+}
+
+export interface WhatsAppProvider {
+  sendTemplateMessage(
+    to: string,
+    templateName: string,
+    params?: string[]
+  ): Promise<SendMessageResult>;
+  sendInteractiveMessage(
+    to: string,
+    body: string,
+    buttons?: InteractiveButton[],
+    listItems?: InteractiveListItem[]
+  ): Promise<SendMessageResult>;
+  verifyWebhookSignature(payload: any, signature: string): boolean;
+  parseWebhookPayload(payload: any): WhatsAppWebhookPayload;
+}
+

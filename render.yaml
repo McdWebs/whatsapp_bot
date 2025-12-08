@@ -1,0 +1,69 @@
+services:
+  - type: web
+    name: whatsapp-reminder-bot
+    env: node
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: whatsapp-bot-redis
+          property: connectionString
+      - key: WHATSAPP_PROVIDER
+        value: twilio
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_WHATSAPP_FROM
+        sync: false
+      - key: TWILIO_WEBHOOK_SECRET
+        sync: false
+      - key: WHATSAPP_TEMPLATE_WELCOME
+        sync: false
+      - key: WHATSAPP_TEMPLATE_REMINDER
+        sync: false
+      - key: WHATSAPP_TEMPLATE_CONFIRMATION
+        sync: false
+      - key: WHATSAPP_TEMPLATE_HELP
+        sync: false
+      - key: ADMIN_API_KEY
+        sync: false
+      - key: ADMIN_JWT_SECRET
+        sync: false
+      - key: DEFAULT_TIMEZONE
+        value: Asia/Jerusalem
+      - key: LOG_LEVEL
+        value: info
+
+  - type: redis
+    name: whatsapp-bot-redis
+    plan: starter
+    maxmemoryPolicy: allkeys-lru
+
+  - type: web
+    name: whatsapp-reminder-bot-admin
+    env: static
+    buildCommand: cd admin-dashboard && npm install && npm run build
+    staticPublishPath: admin-dashboard/dist
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: whatsapp-reminder-bot
+          property: host
+      - key: VITE_API_KEY
+        sync: false
+
