@@ -3,7 +3,7 @@ import { whatsappMessageService } from '../../integrations/whatsapp/message.serv
 import { reminderRepository } from '../../db/repositories/reminder.repository';
 import { userRepository } from '../../db/repositories/user.repository';
 import { hebcalClient } from '../../integrations/hebcal/hebcal.client';
-import { reminderQueue } from '../../scheduler/reminder.queue';
+import { getReminderQueue } from '../../scheduler/reminder.queue';
 import { logger } from '../../utils/logger';
 
 export class SelectingTefillinTimeStateHandler implements StateHandler {
@@ -121,10 +121,20 @@ export class SelectingTefillinTimeStateHandler implements StateHandler {
     sunsetTime: Date
   ): Promise<void> {
     try {
+      const queue = getReminderQueue();
+      if (!queue) {
+        logger.warn('Reminder queue not available - Redis may be disconnected', {
+          userId,
+          reminderId,
+        });
+        // Don't throw - allow reminder to be saved in DB even if queue is unavailable
+        return;
+      }
+
       const now = new Date();
       const delay = Math.max(0, reminderTime.getTime() - now.getTime());
 
-      await reminderQueue.add(
+      await queue.add(
         `reminder-${reminderId}`,
         {
           userId,

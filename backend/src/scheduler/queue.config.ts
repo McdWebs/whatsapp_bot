@@ -6,23 +6,31 @@ let redisClient: Redis | null = null;
 
 export function getRedisClient(): Redis {
   if (!redisClient) {
-    const redisConfig: any = {
-      host: config.redis.host,
-      port: config.redis.port,
-      maxRetriesPerRequest: null, // BullMQ requires this to be null
-      retryStrategy: (times: number) => {
-        const delay = Math.min(times * 50, 2000);
-        return delay;
-      },
-    };
-
-    if (config.redis.password) {
-      redisConfig.password = config.redis.password;
-    }
-
     if (config.redis.url) {
-      redisClient = new Redis(config.redis.url, redisConfig);
+      // When URL is provided, use it directly without host/port override
+      redisClient = new Redis(config.redis.url, {
+        maxRetriesPerRequest: null, // BullMQ requires this to be null
+        retryStrategy: (times: number) => {
+          const delay = Math.min(times * 50, 2000);
+          return delay;
+        },
+      });
     } else {
+      // Fallback to host/port for local development
+      const redisConfig: any = {
+        host: config.redis.host,
+        port: config.redis.port,
+        maxRetriesPerRequest: null, // BullMQ requires this to be null
+        retryStrategy: (times: number) => {
+          const delay = Math.min(times * 50, 2000);
+          return delay;
+        },
+      };
+
+      if (config.redis.password) {
+        redisConfig.password = config.redis.password;
+      }
+
       redisClient = new Redis(redisConfig);
     }
 
