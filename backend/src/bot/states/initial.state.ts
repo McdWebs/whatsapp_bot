@@ -1,6 +1,5 @@
 import { UserState, StateContext, StateHandler } from './index';
 import { whatsappMessageService } from '../../integrations/whatsapp/message.service';
-import { userRepository } from '../../db/repositories/user.repository';
 import { logger } from '../../utils/logger';
 
 export class InitialStateHandler implements StateHandler {
@@ -29,11 +28,16 @@ export class InitialStateHandler implements StateHandler {
 
   private async sendWelcomeMessage(phoneNumber: string): Promise<void> {
     try {
-      await whatsappMessageService.sendTemplateMessage(
-        phoneNumber,
-        'welcome',
-        []
-      );
+      const message = `Welcome to WhatsApp Reminder Bot! 🕯️
+
+I can help you set up reminders for:
+1. Sunset times
+2. Candle-lighting times (Shabbat)
+3. Prayer times
+4. Custom time reminders
+
+Please select a reminder type by replying with the number or name.`;
+      await whatsappMessageService.sendRegularMessage(phoneNumber, message);
     } catch (error) {
       logger.error('Error sending welcome message', { phoneNumber, error });
     }
@@ -41,7 +45,16 @@ export class InitialStateHandler implements StateHandler {
 
   private async sendHelpMessage(phoneNumber: string): Promise<void> {
     try {
-      await whatsappMessageService.sendTemplateMessage(phoneNumber, 'welcome', []);
+      const message = `Welcome to WhatsApp Reminder Bot! 🕯️
+
+I can help you set up reminders for:
+1. Sunset times
+2. Candle-lighting times (Shabbat)
+3. Prayer times
+4. Custom time reminders
+
+Please select a reminder type by replying with the number or name.`;
+      await whatsappMessageService.sendRegularMessage(phoneNumber, message);
     } catch (error) {
       logger.error('Error sending help message', { phoneNumber, error });
     }
@@ -52,10 +65,9 @@ export class InitialStateHandler implements StateHandler {
       const { reminderRepository } = await import('../../db/repositories/reminder.repository');
       await reminderRepository.disableAllForUser(context.userId);
 
-      await whatsappMessageService.sendTemplateMessage(
+      await whatsappMessageService.sendRegularMessage(
         context.phoneNumber,
-        'welcome',
-        ['All reminders have been stopped']
+        'All reminders have been stopped. You can start again anytime by sending a message.'
       );
     } catch (error) {
       logger.error('Error handling unsubscribe', { context, error });

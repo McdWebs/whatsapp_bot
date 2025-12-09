@@ -40,10 +40,9 @@ export class SelectingTimeStateHandler implements StateHandler {
         enabled: true,
       });
 
-      await whatsappMessageService.sendTemplateMessage(
+      await whatsappMessageService.sendRegularMessage(
         context.phoneNumber,
-        'welcome',
-        [`Reminder set for ${time}`]
+        `✅ Reminder set for ${time}`
       );
 
       // Update user state
@@ -76,10 +75,9 @@ export class SelectingTimeStateHandler implements StateHandler {
 
   private async sendInvalidTimeMessage(phoneNumber: string): Promise<void> {
     try {
-      await whatsappMessageService.sendTemplateMessage(
+      await whatsappMessageService.sendRegularMessage(
         phoneNumber,
-        'welcome',
-        ['Invalid time format. Please use HH:MM (24-hour format), e.g., 18:30']
+        'Invalid time format. Please use HH:MM (24-hour format), e.g., 18:30'
       );
     } catch (error) {
       logger.error('Error sending invalid time message', { phoneNumber, error });
@@ -88,7 +86,9 @@ export class SelectingTimeStateHandler implements StateHandler {
 
   private async sendHelpMessage(phoneNumber: string): Promise<void> {
     try {
-      await whatsappMessageService.sendTemplateMessage(phoneNumber, 'welcome', []);
+      const message = `Please enter the time for your reminder in HH:MM format (24-hour).
+Example: 18:30`;
+      await whatsappMessageService.sendRegularMessage(phoneNumber, message);
     } catch (error) {
       logger.error('Error sending help message', { phoneNumber, error });
     }
@@ -96,10 +96,9 @@ export class SelectingTimeStateHandler implements StateHandler {
 
   private async sendErrorMessage(phoneNumber: string): Promise<void> {
     try {
-      await whatsappMessageService.sendTemplateMessage(
+      await whatsappMessageService.sendRegularMessage(
         phoneNumber,
-        'welcome',
-        ['An error occurred. Please try again or contact support.']
+        'An error occurred. Please try again or contact support.'
       );
     } catch (error) {
       logger.error('Error sending error message', { phoneNumber, error });
@@ -109,10 +108,9 @@ export class SelectingTimeStateHandler implements StateHandler {
   private async handleUnsubscribe(context: StateContext): Promise<void> {
     try {
       await reminderRepository.disableAllForUser(context.userId);
-      await whatsappMessageService.sendTemplateMessage(
+      await whatsappMessageService.sendRegularMessage(
         context.phoneNumber,
-        'welcome',
-        ['All reminders have been stopped']
+        'All reminders have been stopped. You can start again anytime by sending a message.'
       );
     } catch (error) {
       logger.error('Error handling unsubscribe', { context, error });

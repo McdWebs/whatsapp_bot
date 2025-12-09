@@ -11,24 +11,39 @@ export class SchedulerService {
   async initialize(): Promise<void> {
     try {
       // Check Redis connection first
+      let redisAvailable = false;
       try {
         const redisClient = getRedisClient();
-        await redisClient.ping();
-        logger.info('Redis connection verified');
+        // Wait a bit for connection to establish
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        const pong = await Promise.race([
+          redisClient.ping(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Redis ping timeout')), 5000))
+        ]);
+        if (pong === 'PONG') {
+          logger.info('Redis connection verified');
+          redisAvailable = true;
+        }
       } catch (redisError) {
         logger.warn('Redis not available - reminder scheduling will be disabled', {
           error: redisError instanceof Error ? redisError.message : String(redisError),
+          note: 'To enable reminders: 1) Create Redis service on Render, 2) Ensure REDIS_URL environment variable is set'
         });
         // Continue without Redis - webhook and admin features will still work
       }
 
       // Start reminder dispatcher (runs every minute) - only if Redis is available
-      try {
-        reminderDispatcher.start();
-      } catch (error) {
-        logger.warn('Reminder dispatcher failed to start (Redis may be unavailable)', {
-          error: error instanceof Error ? error.message : String(error),
-        });
+      if (redisAvailable) {
+        try {
+          reminderDispatcher.start();
+          logger.info('Reminder dispatcher started');
+        } catch (error) {
+          logger.warn('Reminder dispatcher failed to start', {
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      } else {
+        logger.warn('Reminder dispatcher not started - Redis unavailable');
       }
 
       // Schedule daily HebCal sync (runs at 2 AM Israel time)

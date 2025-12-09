@@ -8,7 +8,7 @@ import { ReminderType } from '../../db/repositories/reminder.repository';
 export const messageController = {
   async sendMessage(req: Request, res: Response): Promise<void> {
     try {
-      const { userId, phoneNumber, message, templateName, templateParams } = req.body;
+      const { userId, phoneNumber, message } = req.body;
 
       if (!phoneNumber && !userId) {
         res.status(400).json({ error: 'Either userId or phoneNumber is required' });
@@ -31,31 +31,18 @@ export const messageController = {
         return;
       }
 
-      // Check if we should send a regular message (24-hour window) or template
-      const sendRegular = req.body.sendRegular === true || req.body.sendRegular === 'true';
-      
-      let result: any;
-      
-      if (sendRegular && message) {
-        // Send regular message (works within 24-hour window, no template needed)
-        result = await whatsappMessageService.sendRegularMessage(
-          targetPhoneNumber,
-          message
-        );
-      } else {
-        // Use template if provided, otherwise use custom message
-        const template = templateName || 'welcome';
-        // Only send params if template actually needs them
-        // Welcome template typically has no variables, so don't send empty params
-        const params = templateParams || (message && message.trim() ? [message] : []);
-
-        // Send message
-        result = await whatsappMessageService.sendTemplateMessageWithRetry(
-          targetPhoneNumber,
-          template,
-          params
-        );
+      // Default to sending regular messages (plain text) instead of templates
+      // Templates are disabled for now
+      if (!message || !message.trim()) {
+        res.status(400).json({ error: 'Message content is required' });
+        return;
       }
+
+      // Send regular message (works within 24-hour window, no template needed)
+      const result = await whatsappMessageService.sendRegularMessage(
+        targetPhoneNumber,
+        message.trim()
+      );
 
       if (result.success) {
         // Log to history if userId provided
@@ -85,8 +72,6 @@ export const messageController = {
         const errorMessage = result.error || 'Failed to send message';
         logger.error('Failed to send message from admin', {
           targetPhoneNumber,
-          sendRegular,
-          templateName: sendRegular ? 'regular' : templateName,
           error: errorMessage,
         });
         

@@ -5,18 +5,6 @@ import { userRepository } from '../../db/repositories/user.repository';
 import { logger } from '../../utils/logger';
 
 export class SelectingLocationStateHandler implements StateHandler {
-  private readonly israelCities = [
-    'Jerusalem',
-    'Tel Aviv',
-    'Haifa',
-    'Beer Sheva',
-    'Netanya',
-    'Ashkelon',
-    'Rishon LeZion',
-    'Petah Tikva',
-    'Ashdod',
-    'Eilat',
-  ];
 
   async handle(context: StateContext, message: string): Promise<StateContext> {
     const upperMessage = message.toUpperCase().trim();
@@ -45,10 +33,9 @@ export class SelectingLocationStateHandler implements StateHandler {
         enabled: true,
       });
 
-      await whatsappMessageService.sendTemplateMessage(
+      await whatsappMessageService.sendRegularMessage(
         context.phoneNumber,
-        'welcome',
-        [`Reminder set for ${reminderType} in ${location}`]
+        `✅ Reminder set for ${reminderType} in ${location}`
       );
 
       // Update user state
@@ -67,7 +54,9 @@ export class SelectingLocationStateHandler implements StateHandler {
 
   private async sendHelpMessage(phoneNumber: string): Promise<void> {
     try {
-      await whatsappMessageService.sendTemplateMessage(phoneNumber, 'welcome', []);
+      const message = `Please enter your city name (e.g., Jerusalem, Tel Aviv, Haifa).
+Default: Jerusalem`;
+      await whatsappMessageService.sendRegularMessage(phoneNumber, message);
     } catch (error) {
       logger.error('Error sending help message', { phoneNumber, error });
     }
@@ -75,10 +64,9 @@ export class SelectingLocationStateHandler implements StateHandler {
 
   private async sendErrorMessage(phoneNumber: string): Promise<void> {
     try {
-      await whatsappMessageService.sendTemplateMessage(
+      await whatsappMessageService.sendRegularMessage(
         phoneNumber,
-        'welcome',
-        ['An error occurred. Please try again or contact support.']
+        'An error occurred. Please try again or contact support.'
       );
     } catch (error) {
       logger.error('Error sending error message', { phoneNumber, error });
@@ -88,10 +76,9 @@ export class SelectingLocationStateHandler implements StateHandler {
   private async handleUnsubscribe(context: StateContext): Promise<void> {
     try {
       await reminderRepository.disableAllForUser(context.userId);
-      await whatsappMessageService.sendTemplateMessage(
+      await whatsappMessageService.sendRegularMessage(
         context.phoneNumber,
-        'welcome',
-        ['All reminders have been stopped']
+        'All reminders have been stopped. You can start again anytime by sending a message.'
       );
     } catch (error) {
       logger.error('Error handling unsubscribe', { context, error });

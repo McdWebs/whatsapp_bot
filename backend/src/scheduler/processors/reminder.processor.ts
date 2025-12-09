@@ -8,10 +8,10 @@ import { hebcalSyncService } from '../../services/hebcal-sync.service';
 import { messageTemplateService } from '../../services/message-template.service';
 import { logger } from '../../utils/logger';
 import { ReminderType } from '../../db/repositories/reminder.repository';
-import { parseTime, toIsraelTime } from '../../utils/timezone.utils';
+import { parseTime } from '../../utils/timezone.utils';
 
 export async function processReminderJob(job: Job<ReminderJobData>): Promise<void> {
-  const { userId, reminderType, scheduledTime, location, reminderPreferenceId } = job.data;
+  const { userId, reminderType, location, reminderPreferenceId } = job.data;
 
   try {
     // Get user
@@ -101,11 +101,10 @@ export async function processReminderJob(job: Job<ReminderJobData>): Promise<voi
       reminder_time: reminderTime.toISOString(),
     });
 
-    // Send WhatsApp message (using welcome template for now)
-    const result = await whatsappMessageService.sendTemplateMessageWithRetry(
+    // Send WhatsApp message as plain text
+    const result = await whatsappMessageService.sendRegularMessage(
       user.phone_number,
-      'welcome',
-      [message]
+      message
     );
 
     // Update history with delivery status

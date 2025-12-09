@@ -81,7 +81,7 @@ export class SelectingReminderStateHandler implements StateHandler {
 Reply with the number or name.`;
 
     try {
-      await whatsappMessageService.sendTemplateMessage(phoneNumber, 'welcome', []);
+      await whatsappMessageService.sendRegularMessage(phoneNumber, prompt);
     } catch (error) {
       logger.error('Error sending reminder type prompt', { phoneNumber, error });
     }
@@ -92,7 +92,7 @@ Reply with the number or name.`;
 Example: 18:30`;
 
     try {
-      await whatsappMessageService.sendTemplateMessage(phoneNumber, 'welcome', []);
+      await whatsappMessageService.sendRegularMessage(phoneNumber, prompt);
     } catch (error) {
       logger.error('Error sending time prompt', { phoneNumber, error });
     }
@@ -103,7 +103,7 @@ Example: 18:30`;
 Default: Jerusalem`;
 
     try {
-      await whatsappMessageService.sendTemplateMessage(phoneNumber, 'welcome', []);
+      await whatsappMessageService.sendRegularMessage(phoneNumber, prompt);
     } catch (error) {
       logger.error('Error sending location prompt', { phoneNumber, error });
     }
@@ -111,7 +111,14 @@ Default: Jerusalem`;
 
   private async sendHelpMessage(phoneNumber: string): Promise<void> {
     try {
-      await whatsappMessageService.sendTemplateMessage(phoneNumber, 'welcome', []);
+      const message = `Please select a reminder type:
+1. Sunset times
+2. Candle-lighting times (Shabbat)
+3. Prayer times
+4. Custom time reminder
+
+Reply with the number or name.`;
+      await whatsappMessageService.sendRegularMessage(phoneNumber, message);
     } catch (error) {
       logger.error('Error sending help message', { phoneNumber, error });
     }
@@ -120,10 +127,9 @@ Default: Jerusalem`;
   private async handleUnsubscribe(context: StateContext): Promise<void> {
     try {
       await reminderRepository.disableAllForUser(context.userId);
-      await whatsappMessageService.sendTemplateMessage(
+      await whatsappMessageService.sendRegularMessage(
         context.phoneNumber,
-        'welcome',
-        ['All reminders have been stopped']
+        'All reminders have been stopped. You can start again anytime by sending a message.'
       );
     } catch (error) {
       logger.error('Error handling unsubscribe', { context, error });
