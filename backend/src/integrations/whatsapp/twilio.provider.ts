@@ -303,17 +303,45 @@ export class TwilioProvider extends BaseWhatsAppProvider {
 
       const twilioMessage = await this.client.messages.create(messagePayload);
 
-      logger.info('Regular WhatsApp message sent', {
+      // Log full response with all available fields
+      const fullResponse = {
         messageSid: twilioMessage.sid,
         status: twilioMessage.status,
         to: twilioMessage.to,
         from: twilioMessage.from,
+        body: twilioMessage.body,
         errorCode: twilioMessage.errorCode,
         errorMessage: twilioMessage.errorMessage,
-      });
+        dateCreated: twilioMessage.dateCreated,
+        dateSent: twilioMessage.dateSent,
+        dateUpdated: twilioMessage.dateUpdated,
+        direction: twilioMessage.direction,
+        numMedia: twilioMessage.numMedia,
+        numSegments: twilioMessage.numSegments,
+        price: twilioMessage.price,
+        priceUnit: twilioMessage.priceUnit,
+        uri: twilioMessage.uri,
+        accountSid: twilioMessage.accountSid,
+      };
+      
+      logger.info('Regular WhatsApp message sent - Full response', fullResponse);
 
       // Check for specific error codes (errorCode is a number in Twilio)
       const errorCodeNum = twilioMessage.errorCode ? Number(twilioMessage.errorCode) : null;
+      
+      // Check if message has errors
+      if (errorCodeNum || twilioMessage.errorMessage) {
+        logger.error('Twilio message has error code/message', {
+          messageSid: twilioMessage.sid,
+          status: twilioMessage.status,
+          errorCode: twilioMessage.errorCode,
+          errorMessage: twilioMessage.errorMessage,
+          from: twilioMessage.from,
+          to: twilioMessage.to,
+          fullResponse: JSON.stringify(fullResponse, null, 2),
+        });
+      }
+      
       if (errorCodeNum === 63051 || errorCodeNum === 63016) {
         logger.warn('Message outside 24-hour window - template required', {
           messageSid: twilioMessage.sid,
@@ -322,19 +350,55 @@ export class TwilioProvider extends BaseWhatsAppProvider {
         });
       }
 
+      // Determine if message was successful
+      // Status can be: queued, sending, sent, delivered, undelivered, failed
+      const isSuccess = twilioMessage.status !== 'failed' && 
+                       twilioMessage.status !== 'undelivered' && 
+                       !twilioMessage.errorCode;
+
       return {
-        success: twilioMessage.status !== 'failed' && !twilioMessage.errorCode,
+        success: isSuccess,
         messageId: twilioMessage.sid,
         status: twilioMessage.status,
         error: twilioMessage.errorMessage || (errorCodeNum === 63051 
           ? 'Message outside 24-hour window. Recipient must message you first, or use an approved template.' 
+          : twilioMessage.status === 'undelivered'
+          ? 'Message undelivered. This usually means the recipient is not available or the 24-hour window has expired.'
           : undefined),
       };
     } catch (error: any) {
-      this.logError('sendRegularMessage', error, { to, message });
+      // Extract detailed Twilio error information
+      const errorMessage = error?.message || error?.toString() || 'Unknown error';
+      const errorCode = error?.code;
+      const errorStatus = error?.status;
+      const errorMoreInfo = error?.moreInfo;
+      
+      // Log detailed error information
+      logger.error('Twilio sendRegularMessage error', {
+        to,
+        normalizedTo,
+        normalizedFrom,
+        messageLength: message.length,
+        errorMessage,
+        errorCode,
+        errorStatus,
+        errorMoreInfo,
+        errorStack: error?.stack,
+        errorDetails: JSON.stringify(error, Object.getOwnPropertyNames(error)),
+      });
+      
+      // Build user-friendly error message
+      let userError = errorMessage;
+      if (errorCode) {
+        userError += ` (Code: ${errorCode})`;
+      }
+      if (errorStatus) {
+        userError += ` (Status: ${errorStatus})`;
+      }
+      
       return {
         success: false,
-        error: error?.message || 'Failed to send regular message',
+        error: userError,
       };
     }
   }

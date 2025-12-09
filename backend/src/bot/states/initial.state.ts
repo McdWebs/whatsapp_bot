@@ -38,17 +38,53 @@ Please select a reminder type by replying with the number or name.`;
 
   private async sendReminderTypeMenu(phoneNumber: string): Promise<void> {
     try {
-      await whatsappMessageService.sendRegularMessage(phoneNumber, this.welcomeMessage);
+      const result = await whatsappMessageService.sendRegularMessage(phoneNumber, this.welcomeMessage);
+      if (!result.success) {
+        logger.error('Failed to send reminder type menu', { 
+          phoneNumber, 
+          error: result.error,
+          messageId: result.messageId,
+          status: result.status,
+        });
+      } else {
+        logger.info('Reminder type menu sent successfully', {
+          phoneNumber,
+          messageId: result.messageId,
+          status: result.status,
+        });
+      }
     } catch (error) {
-      logger.error('Error sending reminder type menu', { phoneNumber, error });
+      logger.error('Error sending reminder type menu', { 
+        phoneNumber, 
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
     }
   }
 
   private async sendHelpMessage(phoneNumber: string): Promise<void> {
     try {
-      await whatsappMessageService.sendRegularMessage(phoneNumber, this.welcomeMessage);
+      const result = await whatsappMessageService.sendRegularMessage(phoneNumber, this.welcomeMessage);
+      if (!result.success) {
+        logger.error('Failed to send help message', { 
+          phoneNumber, 
+          error: result.error,
+          messageId: result.messageId,
+          status: result.status,
+        });
+      } else {
+        logger.info('Help message sent successfully', {
+          phoneNumber,
+          messageId: result.messageId,
+          status: result.status,
+        });
+      }
     } catch (error) {
-      logger.error('Error sending help message', { phoneNumber, error });
+      logger.error('Error sending help message', { 
+        phoneNumber, 
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
     }
   }
 

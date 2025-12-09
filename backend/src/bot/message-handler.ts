@@ -32,11 +32,22 @@ export class MessageHandler {
       }
 
       // Process through state machine
+      logger.info('Processing message through state machine', {
+        userId: user.id,
+        phoneNumber,
+        currentState: user.current_state,
+        messageText: parsed.text,
+      });
       await stateMachine.processMessage(user.id, phoneNumber, parsed.text);
+      logger.info('Message processed successfully', {
+        userId: user.id,
+        phoneNumber,
+      });
     } catch (error) {
       logger.error('Error handling message', {
         payload,
         error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
       });
     }
   }
