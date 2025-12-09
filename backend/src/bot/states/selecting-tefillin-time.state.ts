@@ -180,7 +180,7 @@ export class SelectingTefillinTimeStateHandler implements StateHandler {
       });
       const message = `Your reminder has been set successfully.\n\nYou will be reminded ${offsetMinutes} minutes before sunset every day (today at ${timeStr}).`;
       
-      await whatsappMessageService.sendTemplateMessage(phoneNumber, 'confirmation', [message]);
+      await whatsappMessageService.sendRegularMessage(phoneNumber, message);
     } catch (error) {
       logger.error('Error sending confirmation message', { phoneNumber, error });
     }
@@ -188,11 +188,16 @@ export class SelectingTefillinTimeStateHandler implements StateHandler {
 
   private async sendInvalidSelectionMessage(phoneNumber: string): Promise<void> {
     try {
-      await whatsappMessageService.sendMenu(
-        phoneNumber,
-        'Invalid selection. Please choose 1, 2, or 3.\n\nWhen should I remind you before sunset?',
-        ['20 minutes', '30 minutes', '1 hour']
-      );
+      const message = `Invalid selection. Please choose 1, 2, or 3.
+
+When should I remind you before sunset?
+
+1️⃣ 20 minutes
+2️⃣ 30 minutes
+3️⃣ 1 hour
+
+Reply with the number.`;
+      await whatsappMessageService.sendRegularMessage(phoneNumber, message);
     } catch (error) {
       logger.error('Error sending invalid selection message', { phoneNumber, error });
     }
@@ -200,7 +205,15 @@ export class SelectingTefillinTimeStateHandler implements StateHandler {
 
   private async sendHelpMessage(phoneNumber: string): Promise<void> {
     try {
-      await whatsappMessageService.sendTemplateMessage(phoneNumber, 'help', []);
+      const message = `Please select when you'd like to be reminded for Tefillin:
+
+1. 20 minutes before sunrise
+2. 30 minutes before sunrise
+3. 1 hour before sunrise
+4. Custom time (enter HH:MM format)
+
+Reply with the number or time.`;
+      await whatsappMessageService.sendRegularMessage(phoneNumber, message);
     } catch (error) {
       logger.error('Error sending help message', { phoneNumber, error });
     }
@@ -208,10 +221,9 @@ export class SelectingTefillinTimeStateHandler implements StateHandler {
 
   private async sendErrorMessage(phoneNumber: string): Promise<void> {
     try {
-      await whatsappMessageService.sendTemplateMessage(
+      await whatsappMessageService.sendRegularMessage(
         phoneNumber,
-        'help',
-        ['An error occurred while setting your reminder. Please try again later.']
+        'An error occurred while setting your reminder. Please try again later.'
       );
     } catch (error) {
       logger.error('Error sending error message', { phoneNumber, error });
@@ -221,10 +233,9 @@ export class SelectingTefillinTimeStateHandler implements StateHandler {
   private async handleUnsubscribe(context: StateContext): Promise<void> {
     try {
       await reminderRepository.disableAllForUser(context.userId);
-      await whatsappMessageService.sendTemplateMessage(
+      await whatsappMessageService.sendRegularMessage(
         context.phoneNumber,
-        'confirmation',
-        ['All reminders have been stopped']
+        'All reminders have been stopped. You can start again anytime by sending a message.'
       );
     } catch (error) {
       logger.error('Error handling unsubscribe', { context, error });

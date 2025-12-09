@@ -58,11 +58,14 @@ export class SelectingReminderStateHandler implements StateHandler {
 
   private async sendReminderTypeMenu(phoneNumber: string): Promise<void> {
     try {
-      await whatsappMessageService.sendMenu(
-        phoneNumber,
-        'What would you like to do?',
-        ['Tefillin Reminder', 'Custom Reminder', 'Delete Reminder']
-      );
+      const message = `What would you like to do?
+
+1️⃣ Tefillin Reminder
+2️⃣ Custom Reminder
+3️⃣ Delete Reminder
+
+Reply with the number.`;
+      await whatsappMessageService.sendRegularMessage(phoneNumber, message);
     } catch (error) {
       logger.error('Error sending reminder type menu', { phoneNumber, error });
     }
@@ -70,6 +73,13 @@ export class SelectingReminderStateHandler implements StateHandler {
 
   private async sendTefillinTimeMenu(phoneNumber: string): Promise<void> {
     try {
+      const prompt = `Please select when you'd like to be reminded for Tefillin:
+
+1. 30 minutes before sunrise
+2. 1 hour before sunrise
+3. Custom time (enter HH:MM format)
+
+Reply with the number or time.`;
       await whatsappMessageService.sendRegularMessage(phoneNumber, prompt);
     } catch (error) {
       logger.error('Error sending tefillin time menu', { phoneNumber, error });
@@ -84,17 +94,6 @@ Example: 18:30`;
       await whatsappMessageService.sendRegularMessage(phoneNumber, prompt);
     } catch (error) {
       logger.error('Error sending time prompt', { phoneNumber, error });
-    }
-  }
-
-  private async sendLocationPrompt(phoneNumber: string): Promise<void> {
-    const prompt = `Please enter your city name (e.g., Jerusalem, Tel Aviv, Haifa).
-Default: Jerusalem`;
-
-    try {
-      await whatsappMessageService.sendRegularMessage(phoneNumber, prompt);
-    } catch (error) {
-      logger.error('Error sending location prompt', { phoneNumber, error });
     }
   }
 

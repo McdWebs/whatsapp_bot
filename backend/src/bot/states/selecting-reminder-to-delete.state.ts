@@ -57,10 +57,9 @@ export class SelectingReminderToDeleteStateHandler implements StateHandler {
     try {
       await reminderRepository.delete(context.userId, reminderToDelete.type);
       
-      await whatsappMessageService.sendTemplateMessage(
+      await whatsappMessageService.sendRegularMessage(
         context.phoneNumber,
-        'confirmation',
-        [`Reminder "${this.formatReminderType(reminderToDelete.type)}" has been deleted successfully.`]
+        `✅ Reminder "${this.formatReminderType(reminderToDelete.type)}" has been deleted successfully.`
       );
 
       logger.info('Reminder deleted by user', {
@@ -101,11 +100,8 @@ export class SelectingReminderToDeleteStateHandler implements StateHandler {
         return typeLabel;
       });
 
-      await whatsappMessageService.sendMenu(
-        phoneNumber,
-        'Select a reminder to delete:',
-        options
-      );
+      const messageText = `Select a reminder to delete:\n\n${options.map((opt, idx) => `${idx + 1}️⃣ ${opt}`).join('\n')}\n\nReply with the number.`;
+      await whatsappMessageService.sendRegularMessage(phoneNumber, messageText);
     } catch (error) {
       logger.error('Error sending reminders menu', { phoneNumber, error });
     }
@@ -124,10 +120,9 @@ export class SelectingReminderToDeleteStateHandler implements StateHandler {
 
   private async sendNoRemindersMessage(phoneNumber: string): Promise<void> {
     try {
-      await whatsappMessageService.sendTemplateMessage(
+      await whatsappMessageService.sendRegularMessage(
         phoneNumber,
-        'help',
-        ['You have no active reminders to delete.']
+        'You have no active reminders to delete.'
       );
     } catch (error) {
       logger.error('Error sending no reminders message', { phoneNumber, error });
@@ -136,7 +131,10 @@ export class SelectingReminderToDeleteStateHandler implements StateHandler {
 
   private async sendHelpMessage(phoneNumber: string): Promise<void> {
     try {
-      await whatsappMessageService.sendTemplateMessage(phoneNumber, 'help', []);
+      await whatsappMessageService.sendRegularMessage(
+        phoneNumber,
+        'Select a reminder to delete by replying with its number.'
+      );
     } catch (error) {
       logger.error('Error sending help message', { phoneNumber, error });
     }
@@ -144,10 +142,9 @@ export class SelectingReminderToDeleteStateHandler implements StateHandler {
 
   private async sendErrorMessage(phoneNumber: string): Promise<void> {
     try {
-      await whatsappMessageService.sendTemplateMessage(
+      await whatsappMessageService.sendRegularMessage(
         phoneNumber,
-        'help',
-        ['An error occurred while deleting the reminder. Please try again.']
+        'An error occurred while deleting the reminder. Please try again.'
       );
     } catch (error) {
       logger.error('Error sending error message', { phoneNumber, error });
@@ -157,10 +154,9 @@ export class SelectingReminderToDeleteStateHandler implements StateHandler {
   private async handleUnsubscribe(context: StateContext): Promise<void> {
     try {
       await reminderRepository.disableAllForUser(context.userId);
-      await whatsappMessageService.sendTemplateMessage(
+      await whatsappMessageService.sendRegularMessage(
         context.phoneNumber,
-        'confirmation',
-        ['All reminders have been stopped']
+        'All reminders have been stopped. You can start again anytime by sending a message.'
       );
     } catch (error) {
       logger.error('Error handling unsubscribe', { context, error });
