@@ -386,22 +386,43 @@ export class TwilioProvider extends BaseWhatsAppProvider {
       }
       
       // Log detailed error information - this is critical for debugging
+      // Log each piece separately to ensure it shows up in logs
       logger.error('Twilio sendRegularMessage error - DETAILED', {
         to,
         normalizedTo,
         normalizedFrom,
         messageLength: message.length,
-        errorMessage,
-        errorCode,
-        errorStatus,
-        errorMoreInfo,
-        errorName: error?.name,
-        errorStack: error?.stack,
-        allErrorProperties: allErrorProps,
-        errorStringified: JSON.stringify(error, Object.getOwnPropertyNames(error)),
-        errorType: typeof error,
-        errorConstructor: error?.constructor?.name,
       });
+      logger.error('Twilio error message', { errorMessage });
+      logger.error('Twilio error code', { errorCode });
+      logger.error('Twilio error status', { errorStatus });
+      logger.error('Twilio error moreInfo', { errorMoreInfo });
+      logger.error('Twilio error name', { errorName: error?.name });
+      logger.error('Twilio error stack', { errorStack: error?.stack });
+      logger.error('Twilio error type', { errorType: typeof error });
+      logger.error('Twilio error constructor', { errorConstructor: error?.constructor?.name });
+      
+      // Try to stringify the entire error
+      try {
+        const errorStr = JSON.stringify(error, Object.getOwnPropertyNames(error), 2);
+        logger.error('Twilio full error JSON', { fullError: errorStr });
+      } catch (e) {
+        logger.error('Could not stringify error', { stringifyError: String(e) });
+      }
+      
+      // Log all error properties one by one
+      if (error && typeof error === 'object') {
+        Object.getOwnPropertyNames(error).forEach(prop => {
+          try {
+            const value = (error as any)[prop];
+            if (typeof value !== 'function') {
+              logger.error(`Twilio error property: ${prop}`, { [prop]: value });
+            }
+          } catch (e) {
+            // Skip if can't access
+          }
+        });
+      }
       
       // Also log via the base class method for consistency
       this.logError('sendRegularMessage', error, { to, message });
