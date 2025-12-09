@@ -51,6 +51,29 @@ export abstract class BaseWhatsAppProvider implements WhatsAppProvider {
     if (error?.twilioError) {
       errorDetails.twilioError = error.twilioError;
     }
+    
+    // Try to get all error properties
+    if (error) {
+      try {
+        const allProps: any = {};
+        Object.getOwnPropertyNames(error).forEach(prop => {
+          try {
+            const value = (error as any)[prop];
+            // Only include serializable values
+            if (typeof value !== 'function' && typeof value !== 'undefined') {
+              allProps[prop] = value;
+            }
+          } catch (e) {
+            // Skip properties that can't be accessed
+          }
+        });
+        if (Object.keys(allProps).length > 0) {
+          errorDetails.allErrorProperties = allProps;
+        }
+      } catch (e) {
+        // If we can't serialize, just skip
+      }
+    }
 
     logger.error(`WhatsApp provider error: ${operation}`, errorDetails);
   }

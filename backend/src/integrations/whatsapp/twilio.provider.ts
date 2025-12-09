@@ -373,8 +373,20 @@ export class TwilioProvider extends BaseWhatsAppProvider {
       const errorStatus = error?.status;
       const errorMoreInfo = error?.moreInfo;
       
-      // Log detailed error information
-      logger.error('Twilio sendRegularMessage error', {
+      // Get all error properties
+      const allErrorProps: any = {};
+      if (error) {
+        Object.getOwnPropertyNames(error).forEach(prop => {
+          try {
+            allErrorProps[prop] = (error as any)[prop];
+          } catch (e) {
+            allErrorProps[prop] = '[Unable to serialize]';
+          }
+        });
+      }
+      
+      // Log detailed error information - this is critical for debugging
+      logger.error('Twilio sendRegularMessage error - DETAILED', {
         to,
         normalizedTo,
         normalizedFrom,
@@ -383,9 +395,16 @@ export class TwilioProvider extends BaseWhatsAppProvider {
         errorCode,
         errorStatus,
         errorMoreInfo,
+        errorName: error?.name,
         errorStack: error?.stack,
-        errorDetails: JSON.stringify(error, Object.getOwnPropertyNames(error)),
+        allErrorProperties: allErrorProps,
+        errorStringified: JSON.stringify(error, Object.getOwnPropertyNames(error)),
+        errorType: typeof error,
+        errorConstructor: error?.constructor?.name,
       });
+      
+      // Also log via the base class method for consistency
+      this.logError('sendRegularMessage', error, { to, message });
       
       // Build user-friendly error message
       let userError = errorMessage;
