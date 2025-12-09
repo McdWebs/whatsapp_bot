@@ -75,6 +75,8 @@ export class ReminderDispatcher {
               scheduledTime: scheduledTime.toISOString(),
               location: reminder.location,
               reminderPreferenceId: reminder.id,
+              offsetMinutes: reminder.offset_minutes || undefined,
+              sunsetTime: reminder.sunset_time || undefined,
             };
 
             await queue.add(`reminder-${reminder.id}`, jobData, {
@@ -100,7 +102,49 @@ export class ReminderDispatcher {
   private async calculateNextReminderTime(reminder: any): Promise<Date | null> {
     const now = getIsraelTime();
 
-    if (reminder.type === 'custom' && reminder.time) {
+    if (reminder.type === 'tefillin' && reminder.offset_minutes) {
+      // Tefillin reminder - calculate from today's sunset
+      try {
+        const location = reminder.location || 'Jerusalem';
+        const hebcalData = await hebcalSyncService.getCachedData(location, now);
+
+        if (!hebcalData.sunsetTime) {
+          logger.warn('Sunset time not available for tefillin reminder', {
+            reminderId: reminder.id,
+            location,
+          });
+          return null;
+        }
+
+        const sunsetTime = hebcalData.sunsetTime;
+        const reminderTime = new Date(sunsetTime);
+        reminderTime.setMinutes(reminderTime.getMinutes() - reminder.offset_minutes);
+
+        // If reminder time has passed today, calculate for tomorrow
+        if (reminderTime < now) {
+          const tomorrow = new Date(now);
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          const tomorrowData = await hebcalSyncService.getCachedData(location, tomorrow);
+          if (tomorrowData.sunsetTime) {
+            const tomorrowSunset = tomorrowData.sunsetTime;
+            const tomorrowReminderTime = new Date(tomorrowSunset);
+            tomorrowReminderTime.setMinutes(
+              tomorrowReminderTime.getMinutes() - reminder.offset_minutes
+            );
+            return tomorrowReminderTime;
+          }
+          return null;
+        }
+
+        return reminderTime;
+      } catch (error) {
+        logger.error('Error calculating tefillin reminder time', {
+          reminderId: reminder.id,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        return null;
+      }
+    } else if (reminder.type === 'custom' && reminder.time) {
       // Custom time reminder
       const timeParts = parseTime(reminder.time);
       if (!timeParts) {

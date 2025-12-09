@@ -8,6 +8,8 @@ export interface ReminderJobData {
   scheduledTime: string; // ISO timestamp
   location: string;
   reminderPreferenceId: string;
+  offsetMinutes?: number | null;
+  sunsetTime?: string | null; // ISO timestamp
 }
 
 let reminderQueue: Queue<ReminderJobData> | null = null;

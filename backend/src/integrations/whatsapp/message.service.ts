@@ -98,23 +98,14 @@ export class WhatsAppMessageService {
     return this.provider.verifyWebhookSignature(payload, signature);
   }
 
-  async sendRegularMessage(
-    to: string,
-    message: string
-  ): Promise<SendMessageResult> {
-    if (!this.provider.sendRegularMessage) {
-      return {
-        success: false,
-        error: 'Regular messages not supported by this provider',
-      };
-    }
-
+  async sendMenu(to: string, title: string, options: string[]): Promise<SendMessageResult> {
     try {
-      const result = await this.provider.sendRegularMessage(to, message);
+      const result = await this.provider.sendMenu(to, title, options);
       return result;
     } catch (error) {
-      logger.error('Error sending WhatsApp regular message', {
+      logger.error('Error sending WhatsApp menu', {
         to,
+        title,
         error: error instanceof Error ? error.message : String(error),
       });
       return {

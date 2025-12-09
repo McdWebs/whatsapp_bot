@@ -139,8 +139,14 @@ export const config: Config = {
   },
   redis: {
     url: getOptionalEnv('REDIS_URL'),
-    host: getOptionalEnv('REDIS_HOST', 'localhost') || 'localhost',
-    port: parseInt(getOptionalEnv('REDIS_PORT', '6379') || '6379', 10),
+    // Only use localhost fallback in development
+    // In production (Render), REDIS_URL should always be provided
+    host: getOptionalEnv('REDIS_URL') 
+      ? undefined 
+      : (getOptionalEnv('REDIS_HOST') || (getOptionalEnv('NODE_ENV') === 'development' ? 'localhost' : undefined)),
+    port: getOptionalEnv('REDIS_URL')
+      ? undefined
+      : parseInt(getOptionalEnv('REDIS_PORT', '6379') || '6379', 10),
     password: getOptionalEnv('REDIS_PASSWORD'),
   },
   whatsapp: {

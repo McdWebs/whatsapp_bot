@@ -76,6 +76,42 @@ export class HebCalClient {
     return results;
   }
 
+  async getSunsetTime(
+    latitude?: number,
+    longitude?: number,
+    date: Date = new Date()
+  ): Promise<Date | null> {
+    try {
+      // Default to Jerusalem if coordinates not provided
+      const location = latitude && longitude ? `${latitude},${longitude}` : 'Jerusalem';
+      
+      const hebcalData = await this.fetchCalendarData(location, date);
+      
+      if (hebcalData.sunsetTime) {
+        logger.info('Sunset time retrieved', {
+          location,
+          date: date.toISOString(),
+          sunsetTime: hebcalData.sunsetTime.toISOString(),
+        });
+        return hebcalData.sunsetTime;
+      }
+
+      logger.warn('Sunset time not found in HebCal data', {
+        location,
+        date: date.toISOString(),
+      });
+      return null;
+    } catch (error) {
+      logger.error('Error getting sunset time', {
+        latitude,
+        longitude,
+        date: date.toISOString(),
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+  }
+
   private parseResponse(
     response: HebCalResponse,
     location: string,

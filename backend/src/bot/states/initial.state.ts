@@ -17,8 +17,8 @@ export class InitialStateHandler implements StateHandler {
       return { ...context, currentState: UserState.CONFIRMED };
     }
 
-    // Welcome new user and start onboarding
-    await this.sendWelcomeMessage(context.phoneNumber);
+    // Send reminder type menu immediately
+    await this.sendReminderTypeMenu(context.phoneNumber);
 
     return {
       ...context,
@@ -26,7 +26,7 @@ export class InitialStateHandler implements StateHandler {
     };
   }
 
-  private async sendWelcomeMessage(phoneNumber: string): Promise<void> {
+  private async sendReminderTypeMenu(phoneNumber: string): Promise<void> {
     try {
       const message = `Welcome to WhatsApp Reminder Bot! 🕯️
 
@@ -39,7 +39,7 @@ I can help you set up reminders for:
 Please select a reminder type by replying with the number or name.`;
       await whatsappMessageService.sendRegularMessage(phoneNumber, message);
     } catch (error) {
-      logger.error('Error sending welcome message', { phoneNumber, error });
+      logger.error('Error sending reminder type menu', { phoneNumber, error });
     }
   }
 

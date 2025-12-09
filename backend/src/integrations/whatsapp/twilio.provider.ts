@@ -20,6 +20,79 @@ export class TwilioProvider extends BaseWhatsAppProvider {
     this.fromNumber = config.whatsapp.twilio.from;
   }
 
+  async sendMenu(to: string, title: string, options: string[]): Promise<SendMessageResult> {
+    const normalizedTo = this.normalizePhoneNumber(to);
+    let normalizedFrom = this.fromNumber;
+    if (!normalizedFrom.startsWith('whatsapp:')) {
+      const phoneOnly = this.normalizePhoneNumber(this.fromNumber);
+      normalizedFrom = `whatsapp:${phoneOnly}`;
+    }
+
+    try {
+      // Format menu with emoji indicators
+      const optionsText = options
+        .map((option, index) => {
+          const emoji = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣'][index] || `${index + 1}.`;
+          return `${emoji} ${option}`;
+        })
+        .join('\n');
+
+      const menuBody = `${title}\n\n${optionsText}\n\nReply with the number.`;
+
+      logger.info('Sending Twilio WhatsApp menu', {
+        from: normalizedFrom,
+        to: normalizedTo,
+        title,
+        optionsCount: options.length,
+      });
+
+      // Send as regular text message (not template)
+      const message = await this.client.messages.create({
+        from: normalizedFrom,
+        to: `whatsapp:${normalizedTo}`,
+        body: menuBody,
+      });
+
+      logger.info('Twilio menu sent successfully', {
+        messageSid: message.sid,
+        status: message.status,
+      });
+
+      return {
+        success: true,
+        messageId: message.sid,
+      };
+    } catch (error: any) {
+      const errorMessage = error?.message || error?.toString() || 'Unknown error';
+      const errorCode = error?.code;
+      const errorStatus = error?.status;
+
+      logger.error('Twilio sendMenu error', {
+        to,
+        normalizedTo,
+        normalizedFrom,
+        title,
+        errorMessage,
+        errorCode,
+        errorStatus,
+        errorStack: error?.stack,
+      });
+
+      let userError = errorMessage;
+      if (errorCode) {
+        userError += ` (Code: ${errorCode})`;
+      }
+      if (errorStatus) {
+        userError += ` (Status: ${errorStatus})`;
+      }
+
+      return {
+        success: false,
+        error: userError,
+      };
+    }
+  }
+
   async sendTemplateMessage(
     to: string,
     templateName: string,
