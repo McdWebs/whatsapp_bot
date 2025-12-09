@@ -31,6 +31,10 @@ export interface WhatsAppProvider {
     templateName: string,
     params?: string[]
   ): Promise<SendMessageResult>;
+  sendRegularMessage?(
+    to: string,
+    message: string
+  ): Promise<SendMessageResult>;
   sendMenu(to: string, title: string, options: string[]): Promise<SendMessageResult>;
   verifyWebhookSignature(payload: any, signature: string): boolean;
   parseWebhookPayload(payload: any): WhatsAppWebhookPayload;

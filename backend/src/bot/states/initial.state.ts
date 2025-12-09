@@ -26,9 +26,7 @@ export class InitialStateHandler implements StateHandler {
     };
   }
 
-  private async sendReminderTypeMenu(phoneNumber: string): Promise<void> {
-    try {
-      const message = `Welcome to WhatsApp Reminder Bot! 🕯️
+  private readonly welcomeMessage = `Welcome to WhatsApp Reminder Bot! 🕯️
 
 I can help you set up reminders for:
 1. Sunset times
@@ -37,7 +35,10 @@ I can help you set up reminders for:
 4. Custom time reminders
 
 Please select a reminder type by replying with the number or name.`;
-      await whatsappMessageService.sendRegularMessage(phoneNumber, message);
+
+  private async sendReminderTypeMenu(phoneNumber: string): Promise<void> {
+    try {
+      await whatsappMessageService.sendRegularMessage(phoneNumber, this.welcomeMessage);
     } catch (error) {
       logger.error('Error sending reminder type menu', { phoneNumber, error });
     }
@@ -45,16 +46,7 @@ Please select a reminder type by replying with the number or name.`;
 
   private async sendHelpMessage(phoneNumber: string): Promise<void> {
     try {
-      const message = `Welcome to WhatsApp Reminder Bot! 🕯️
-
-I can help you set up reminders for:
-1. Sunset times
-2. Candle-lighting times (Shabbat)
-3. Prayer times
-4. Custom time reminders
-
-Please select a reminder type by replying with the number or name.`;
-      await whatsappMessageService.sendRegularMessage(phoneNumber, message);
+      await whatsappMessageService.sendRegularMessage(phoneNumber, this.welcomeMessage);
     } catch (error) {
       logger.error('Error sending help message', { phoneNumber, error });
     }
