@@ -212,14 +212,41 @@ export class TwilioProvider extends BaseWhatsAppProvider {
         });
       }
 
-      // Check if message was actually sent successfully
-      const isSuccess = message.status !== 'failed' && !message.errorCode;
+      // Common Twilio WhatsApp error codes for templates
+      const errorCodeNum = message.errorCode ? Number(message.errorCode) : null;
+      const errorMessages: Record<number, string> = {
+        63016: 'Template not found or not approved. Check Content SID and approval status in Twilio Console.',
+        63051: 'Message outside 24-hour window. Recipient must message you first, or use an approved template.',
+        21211: 'Invalid "To" phone number. Check phone number format.',
+        21608: 'Invalid "From" phone number. Verify WhatsApp number is correct and enabled.',
+        21614: 'WhatsApp number not enabled. Enable WhatsApp in Twilio Console.',
+        30008: 'Message delivery failed. Check recipient number and Twilio account status.',
+      };
+
+      if (errorCodeNum && errorMessages[errorCodeNum]) {
+        logger.warn('Twilio template error code detected', {
+          messageSid: message.sid,
+          errorCode: message.errorCode,
+          errorMessage: errorMessages[errorCodeNum],
+          templateId,
+        });
+      }
+
+      // Consider queued/sending as success (delivery will be confirmed later)
+      const isSuccess = message.status !== 'failed' && 
+                       !message.errorCode &&
+                       (message.status === 'queued' || 
+                        message.status === 'sending' || 
+                        message.status === 'sent' ||
+                        message.status === 'delivered');
       
       return {
         success: isSuccess,
         messageId: message.sid,
         status: message.status,
-        error: message.errorMessage || (message.status === 'failed' ? 'Message failed' : undefined),
+        error: message.errorMessage || 
+               (errorCodeNum && errorMessages[errorCodeNum]) ||
+               (message.status === 'failed' ? 'Message failed' : undefined),
       };
     } catch (error: any) {
       // Extract Twilio error details
@@ -329,42 +356,51 @@ export class TwilioProvider extends BaseWhatsAppProvider {
       // Check for specific error codes (errorCode is a number in Twilio)
       const errorCodeNum = twilioMessage.errorCode ? Number(twilioMessage.errorCode) : null;
       
-      // Check if message has errors
-      if (errorCodeNum || twilioMessage.errorMessage) {
-        logger.error('Twilio message has error code/message', {
-          messageSid: twilioMessage.sid,
-          status: twilioMessage.status,
-          errorCode: twilioMessage.errorCode,
-          errorMessage: twilioMessage.errorMessage,
-          from: twilioMessage.from,
-          to: twilioMessage.to,
-          fullResponse: JSON.stringify(fullResponse, null, 2),
-        });
-      }
-      
-      if (errorCodeNum === 63051 || errorCodeNum === 63016) {
-        logger.warn('Message outside 24-hour window - template required', {
+      // Common Twilio WhatsApp error codes
+      const errorMessages: Record<number, string> = {
+        63016: 'Template not found or not approved. Check template ID and approval status in Twilio Console.',
+        63051: 'Message outside 24-hour window. Recipient must message you first, or use an approved template.',
+        21211: 'Invalid "To" phone number. Check phone number format.',
+        21608: 'Invalid "From" phone number. Verify WhatsApp number is correct and enabled.',
+        21614: 'WhatsApp number not enabled. Enable WhatsApp in Twilio Console.',
+        30008: 'Message delivery failed. Check recipient number and Twilio account status.',
+      };
+
+      if (errorCodeNum && errorMessages[errorCodeNum]) {
+        logger.warn('Twilio error code detected', {
           messageSid: twilioMessage.sid,
           errorCode: twilioMessage.errorCode,
-          note: 'Recipient must message you first, or use an approved template',
+          errorMessage: errorMessages[errorCodeNum],
         });
       }
 
-      // Determine if message was successful
+      // Consider queued/sending as success (delivery will be confirmed later)
       // Status can be: queued, sending, sent, delivered, undelivered, failed
       const isSuccess = twilioMessage.status !== 'failed' && 
                        twilioMessage.status !== 'undelivered' && 
-                       !twilioMessage.errorCode;
+                       !twilioMessage.errorCode &&
+                       (twilioMessage.status === 'queued' || 
+                        twilioMessage.status === 'sending' || 
+                        twilioMessage.status === 'sent' ||
+                        twilioMessage.status === 'delivered');
+
+      // Build error message
+      let errorMsg: string | undefined;
+      if (twilioMessage.errorMessage) {
+        errorMsg = twilioMessage.errorMessage;
+      } else if (errorCodeNum && errorMessages[errorCodeNum]) {
+        errorMsg = errorMessages[errorCodeNum];
+      } else if (twilioMessage.status === 'failed') {
+        errorMsg = 'Message failed to send';
+      } else if (twilioMessage.status === 'undelivered') {
+        errorMsg = 'Message undelivered. This usually means the recipient is not available or the 24-hour window has expired.';
+      }
 
       return {
         success: isSuccess,
         messageId: twilioMessage.sid,
         status: twilioMessage.status,
-        error: twilioMessage.errorMessage || (errorCodeNum === 63051 
-          ? 'Message outside 24-hour window. Recipient must message you first, or use an approved template.' 
-          : twilioMessage.status === 'undelivered'
-          ? 'Message undelivered. This usually means the recipient is not available or the 24-hour window has expired.'
-          : undefined),
+        error: errorMsg,
       };
     } catch (error: any) {
       // Extract detailed Twilio error information

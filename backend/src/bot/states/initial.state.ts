@@ -38,7 +38,12 @@ Please select a reminder type by replying with the number or name.`;
 
   private async sendReminderTypeMenu(phoneNumber: string): Promise<void> {
     try {
-      const result = await whatsappMessageService.sendRegularMessage(phoneNumber, this.welcomeMessage);
+      // Use sendMenu for interactive menu (works within 24-hour window)
+      const result = await whatsappMessageService.sendMenu(
+        phoneNumber,
+        'What would you like to do?',
+        ['Tefillin Reminder', 'Custom Reminder', 'Delete Reminder']
+      );
       if (!result.success) {
         logger.error('Failed to send reminder type menu', { 
           phoneNumber, 
@@ -93,10 +98,17 @@ Please select a reminder type by replying with the number or name.`;
       const { reminderRepository } = await import('../../db/repositories/reminder.repository');
       await reminderRepository.disableAllForUser(context.userId);
 
-      await whatsappMessageService.sendRegularMessage(
+      // Use regular message for unsubscribe confirmation (within 24-hour window)
+      const result = await whatsappMessageService.sendResponseMessage(
         context.phoneNumber,
-        'All reminders have been stopped. You can start again anytime by sending a message.'
+        'All reminders have been stopped'
       );
+      if (!result.success) {
+        logger.warn('Unsubscribe confirmation message failed', { 
+          context, 
+          error: result.error 
+        });
+      }
     } catch (error) {
       logger.error('Error handling unsubscribe', { context, error });
     }
