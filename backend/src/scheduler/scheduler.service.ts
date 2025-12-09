@@ -10,10 +10,16 @@ export class SchedulerService {
 
   async initialize(): Promise<void> {
     try {
-      // Check Redis connection first
+      // Check Redis connection first (with timeout to prevent blocking)
       try {
         const redisClient = getRedisClient();
-        await redisClient.ping();
+        // Use Promise.race to add timeout - don't wait more than 2 seconds
+        await Promise.race([
+          redisClient.ping(),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Redis ping timeout')), 2000)
+          ),
+        ]);
         logger.info('Redis connection verified');
       } catch (redisError) {
         logger.warn('Redis not available - reminder scheduling will be disabled', {

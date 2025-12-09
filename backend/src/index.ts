@@ -32,16 +32,23 @@ app.use((err: Error, req: express.Request, res: express.Response, next: express.
 });
 
 // Start server
-const PORT = config.server.port;
+// Use process.env.PORT directly (Render sets this automatically)
+// Fallback to config for local development
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : config.server.port;
 
 async function startServer() {
   try {
-    // Initialize scheduler
-    await schedulerService.initialize();
-    logger.info('Scheduler initialized');
+    // Initialize scheduler (non-blocking - won't prevent server from starting)
+    schedulerService.initialize().catch((error) => {
+      logger.warn('Scheduler initialization failed, but server will continue', { error });
+    });
 
+    // Start server immediately - don't wait for scheduler
     app.listen(PORT, () => {
-      logger.info(`Server running on port ${PORT}`, { env: config.server.nodeEnv });
+      logger.info(`Server running on port ${PORT}`, { 
+        env: config.server.nodeEnv,
+        port: PORT,
+      });
     });
   } catch (error) {
     logger.error('Failed to start server', { error });
